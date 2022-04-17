@@ -161,7 +161,7 @@ int m_envoi(MESSAGE *file, const void *msg, size_t len, int msgflag){
     /* section critique */
 
       //verifiant si la longeur de message est 
-      //plus grand que la longeur maximale supporte par le file
+      //plus grand que la longeur maximale supporte par la file
       if(len > file->m->len_max_msg){
                       errno = EMSGSIZE;
                       return -1;

@@ -5,8 +5,8 @@ int main( int argc , char *argv[]){
     MESSAGE* file = malloc(sizeof(MESSAGE));
     file = m_connexion("yahya",O_CREAT|O_RDWR,1,1,0666);
     
-    //int t[2] = {-12, 99};
-    int t = 2;
+    int t[2] = {-12, 99};
+    //int t = 2;
     mon_message *m = malloc( sizeof( mon_message ) + sizeof( int ));
     if( m == NULL ){ exit(EXIT_FAILURE);}
     
