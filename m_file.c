@@ -13,7 +13,7 @@ MESSAGE *m_connexion(const char *nom, int options,...){
   int IS_CREATE = true;
 
   MESSAGE *message = malloc(sizeof(MESSAGE));
-  memory *mem = malloc(sizeof(memory));
+  //memory *mem = malloc(sizeof(memory));
   message->options = 0;
   message->m = NULL;
 
@@ -27,10 +27,9 @@ MESSAGE *m_connexion(const char *nom, int options,...){
   if(IS_CREATE == true){
 
     if(nom == NULL){
-
-      mem = mmap(NULL, sizeof(memory), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS ,-1,0);
+      memory *mem = mmap(NULL, sizeof(memory), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS ,-1,0);
       int code;      
-      mem->first=0;
+      mem->first=-1;
       mem->last=-1;
       mem->len_max_msg = len_max;
       mem->capacite = nb_msg;
@@ -56,9 +55,16 @@ MESSAGE *m_connexion(const char *nom, int options,...){
     }else{
 
     char *shm_name = prefix_slash(nom);
-    
+    char dest[50] = "/dev/shm/";
+
+    strcat(dest,shm_name);
+    if( (access( dest, F_OK ) != -1) && (((options>>6) & 1) == 1) && (((options>>5) & 1) == 1))
+    {
+       printf("Object memory exist");
+    }  
+
     /* open and create */
-    int fd = shm_open(shm_name, options,mode);
+    int fd = shm_open(shm_name,options,mode);
     if( fd < 0 )
       PANIC_EXIT("shm_open");
     
@@ -67,12 +73,12 @@ MESSAGE *m_connexion(const char *nom, int options,...){
       PANIC_EXIT("ftruncate");
     /* projection de shared memory object dans
     * la mémoire                              */
-    mem = mmap(NULL, sizeof(memory), PROT_READ|PROT_WRITE,MAP_SHARED, fd, 0);
+    memory *mem = mmap(NULL, sizeof(memory), PROT_READ|PROT_WRITE,MAP_SHARED, fd, 0);
     if( (void *)mem == MAP_FAILED )
       return NULL;
     //initialiser la mémoire
     int code;
-    mem->first=0;
+    mem->first=-1;
     mem->last=-1;
     mem->len_max_msg = len_max;
     mem->capacite = nb_msg;
@@ -106,7 +112,7 @@ MESSAGE *m_connexion(const char *nom, int options,...){
     
       //projection en mémoire
       
-      mem = mmap(NULL, sizeof(memory), PROT_READ|PROT_WRITE,MAP_SHARED, fd, 0);
+      memory *mem = mmap(NULL, sizeof(memory), PROT_READ|PROT_WRITE,MAP_SHARED, fd, 0);
       if( (void *)mem == MAP_FAILED)
         return NULL;
       
@@ -123,13 +129,13 @@ MESSAGE *m_connexion(const char *nom, int options,...){
 
 int m_deconnexion(MESSAGE *file){
   
-  /*
-    int size = offsetof(file->m, file->m->messages) + strlen(file->m->messages);
-
-    if( munmap(file->m, size) < 0 )
+    int i = munmap(file->m, sizeof(*(file->m)));
+    if(i < 0 ){
       return -1;
-  */ 
-  return 0;
+    }
+  
+    return 0;
+  
   
 }
 
@@ -143,13 +149,14 @@ int m_destruction( const char *nom){
 
 int m_envoi(MESSAGE *file, const void *msg, size_t len, int msgflag){
 
+/* 
     int code;
     code = pthread_mutex_lock(&file->m->mutex);
     if( code != 0 ){
       perror("lock non reussi");
     }
 
-    /* attendre jusqu'à ce que la mémoire est libre */    
+    attendre jusqu'à ce que la mémoire est libre 
     while( !file->m->CAN_SEND_MESSAGE ){
       code = pthread_cond_wait(&file->m->wcond, &file->m->mutex);
       if( code > 0 ){
@@ -157,7 +164,7 @@ int m_envoi(MESSAGE *file, const void *msg, size_t len, int msgflag){
 	     perror("pthread_cond_wait" );
       }
     }
-
+  */  
     /* section critique */
 
       //verifiant si la longeur de message est 
@@ -167,16 +174,24 @@ int m_envoi(MESSAGE *file, const void *msg, size_t len, int msgflag){
                       return -1;
       }
 
-
-      if(file->m->capacite == file->m->size){
+      if((file->m->first == -1) && (file->m->last == -1)){
+        file->m->first = 0;
+        file->m->last = 0;
+        printf("dans premier if de la fonction m_envoi\n");
+        memmove(&file->m->messages[file->m->last], msg, len);
+        file->m->messages[file->m->last].size_msg = len;
+        file->m->size++;
+        file->m->CAN_SEND_MESSAGE = 0;
+      }
+      else if((file->m->last + 1) % file->m->capacite == file->m->first){
               if(msgflag == O_NONBLOCK){
                       errno = EAGAIN;
                       return -1;
               }else if(msgflag == 0){
                 while(1){
-                  if(file->m->capacite > file->m->size){
+                  if((file->m->last + 1)%file->m->capacite != file->m->first){
                       file->m->last = (file->m->last + 1) % file->m->capacite;
-                      memmove(file->m->messages[file->m->last].m_text, msg, len);
+                      memmove(&file->m->messages[file->m->last], msg, len);
                       file->m->messages[file->m->last].size_msg = len;
                       file->m->size++;
                       file->m->CAN_SEND_MESSAGE = 0;
@@ -186,22 +201,23 @@ int m_envoi(MESSAGE *file, const void *msg, size_t len, int msgflag){
               }
         }else{
           file->m->last = (file->m->last + 1) % file->m->capacite;
-          memmove(file->m->messages[file->m->last].m_text, msg, len);
+          printf("dans else de la fonction m_envoi\n");
+          memmove(&file->m->messages[file->m->last], msg, len);
           file->m->messages[file->m->last].size_msg = len;
           file->m->size++;
           file->m->CAN_SEND_MESSAGE = 0; /* IL YA UN MESSAGE A LIRE */
         }
     /*fin de section critique */
-
+/*
      code = pthread_mutex_unlock(&file->m->mutex);
     if( code != 0)
       perror("mutex_unlock" );
 
-    /* signaler le lecteur */
+     signaler le lecteur 
     code = pthread_cond_signal( &file->m->rcond );
     if( code > 0 )
       perror("cond_signal" );
-
+*/
     return 0;
 }
 
