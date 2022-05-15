@@ -235,7 +235,7 @@ int m_envoi(MESSAGE *file, const void *msge, size_t len, int msgflag){
 ssize_t m_reception(MESSAGE *file, void *msge, size_t len, long type, int flags){
 
   mon_message *msg = msge;
-
+  ssize_t taille_message_lu = -1;
 
     if(type == 0){
       if(len < file->m->messages[file->m->first].size_msg){
@@ -255,6 +255,7 @@ ssize_t m_reception(MESSAGE *file, void *msge, size_t len, long type, int flags)
            }
       }else{
           *msg = file->m->messages[file->m->first];
+          taille_message_lu = file->m->messages[file->m->first].size_msg;
           supprime_une_case(file,file->m->first,file->m->last);
           decrementation_last(file);
          
@@ -288,6 +289,7 @@ ssize_t m_reception(MESSAGE *file, void *msge, size_t len, long type, int flags)
 
                 if(find==TRUE){
                       *msg = file->m->messages[position];
+                      taille_message_lu = file->m->messages[position].size_msg;
                       supprime_une_case(file,position,file->m->last);
                       //modification de la valeur de last 
                       decrementation_last(file);
@@ -336,6 +338,7 @@ ssize_t m_reception(MESSAGE *file, void *msge, size_t len, long type, int flags)
 
                 if(find==TRUE){
                        *msg = file->m->messages[position];
+                       taille_message_lu = file->m->messages[position].size_msg;
                        supprime_une_case(file,position,file->m->last);
                       //modification de la valeur de last 
                       decrementation_last(file);
@@ -362,7 +365,7 @@ ssize_t m_reception(MESSAGE *file, void *msge, size_t len, long type, int flags)
     
 
   
-  return 0;
+  return taille_message_lu;
 }
 
 
@@ -430,4 +433,5 @@ void bloque_and_wait_signal_nouveau_message(MESSAGE *file){
    printf("\n un nouveau message vient d'etre inserer, verifiant si on peut lire \n "); 
 
 }
+
 
