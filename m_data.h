@@ -5,7 +5,7 @@
 typedef struct mon_message{
     size_t size_msg;
     long type;
-    char m_text[];
+    char m_text[20];
 }mon_message;
 
 
@@ -15,11 +15,12 @@ typedef  struct memory{
   int first;
   int last;
   int size; // current capacity of the queue
-  pthread_mutex_t mutex;
-  pthread_cond_t  rcond; // à modifier
-  pthread_cond_t  wcond; // à modifier
+
+  pthread_mutex_t mutex_ecriture_message;
+  pthread_cond_t  cond_signal_nouveau_message;
+
   int CAN_SEND_MESSAGE;
-  mon_message *messages; 
+  mon_message messages [30];
 }memory;
 
 typedef struct MESSAGE {

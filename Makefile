@@ -4,18 +4,19 @@ LDLIBS=-lrt -pthread  #linux
 
 
 
-ALL =  test
+ALL =  test test2
 
 all : $(ALL)
 
 
-test : test.o m_init_mutex.o m_prefix_slash.o m_file.o m_thread_error.o
-test.o : test.c
 m_init_mutex.o : m_init_mutex.c m_init_mutex.h
 m_prefix_slash.o: m_prefix_slash.c m_prefix_slash.h
-m_file.o : m_file.c m_file.h
 m_thread_error.o : m_thread_error.c m_thread_error.h
+m_file.o : m_file.c m_file.h
 
+
+test : test.c m_init_mutex.o m_prefix_slash.o m_file.o m_thread_error.o
+test2 : test2.c m_init_mutex.o m_prefix_slash.o m_file.o m_thread_error.o
 
 clean:
 	rm -rf *~
